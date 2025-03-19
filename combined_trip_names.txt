@@ -1,0 +1,11 @@
+trip_id,route_long_name
+r13553067_Mo-Su,North Paravur -> Vyttila
+r13553066_Mo-Su,Vyttila -> North Paravur
+r13606905_Mo-Su,Thrippunithura -> Vyttila
+r13606904_Mo-Su,Vyttila -> Thrippunithura
+r13689657_Mo-Su,Aluva -> Vyttila
+r13689656_Mo-Su,Vyttila -> Aluva
+r13904696_Mo-Su,Poothota -> Ernakulam South KSRTC
+r13904697_Mo-Su,Ernakulam South KSRTC -> Poothota
+r123456781_Mo-Su,Ernakulam South KSRTC -> K.S.R.T.C Muvattupuzha Bus Stand
+r123456782_Mo-Su,K.S.R.T.C Muvattupuzha Bus Stand -> KSRTC Bus Station Ernakulam

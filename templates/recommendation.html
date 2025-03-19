@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ITS - Demand Forecast</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Full-width Navbar styling with three sections */
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: linear-gradient(90deg, #112240, #1e3c72);
+      box-shadow: var(--shadow);
+      margin-bottom: 1rem;
+    }
+    .navbar-left,
+    .navbar-center,
+    .navbar-right {
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+    .navbar-center {
+      justify-content: center;
+      gap: 1rem;
+    }
+    .navbar-right {
+      justify-content: flex-end;
+      position: relative;
+    }
+    .logo {
+      height: 50px;
+    }
+    /* Center buttons styling */
+    .nav-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.2rem;
+      font-family: 'Montserrat', sans-serif;
+      cursor: pointer;
+      text-decoration: none;
+      padding: 0.25rem 0.5rem;
+    }
+    .nav-btn:hover {
+      text-decoration: underline;
+    }
+    /* Active button styling for the current page */
+    .nav-btn.active {
+      color: #1e90ff;
+      border-bottom: 2px solid #1e90ff;
+    }
+    /* Profile button styles */
+    .profile-btn {
+      display: flex;
+      align-items: center;
+      background: none;
+      border: none;
+      cursor: pointer;
+      outline: none;
+      color: white;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+    .profile-icon {
+      height: 30px;
+      width: 30px;
+      margin-right: 0.5rem;
+      filter: brightness(0) invert(1);
+    }
+    .profile-btn span {
+      font-family: 'Montserrat', sans-serif;
+    }
+    .dropdown {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 60px;
+      background: #fff;
+      border: 1px solid var(--gray-light);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      z-index: 100;
+      min-width: 150px;
+    }
+    .dropdown-item {
+      display: block;
+      padding: 0.75rem 1rem;
+      color: var(--dark);
+      text-decoration: none;
+    }
+    .dropdown-item:hover {
+      background: var(--gray-light);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Navbar with left, center and right sections -->
+    <div class="navbar">
+      <div class="navbar-left">
+        <img src="{{ url_for('static', filename='img/itslogo.PNG') }}" alt="ITS Logo" class="logo">
+      </div>
+      <div class="navbar-center">
+        <a href="/dashboard" class="nav-btn">Home</a>
+        <a href="/recommendation" class="nav-btn active">Recommendation</a>
+        <a href="/live_bus" class="nav-btn">Live Bus</a>
+        <a href="/outside_bus" class="nav-btn">Bus Schedules</a>
+      </div>
+      <div class="navbar-right">
+        <button class="profile-btn" id="profileBtn">
+          <img src="{{ url_for('static', filename='img/profile.svg') }}" alt="Profile Icon" class="profile-icon">
+          <span>Profile</span>
+        </button>
+        <div class="dropdown" id="profileDropdown">
+          <a href="/profile" class="dropdown-item">Profile</a>
+          <a href="/logout" class="dropdown-item">Logout</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recommendation Content -->
+    <div class="glass-card animate-fade-in">
+      <h2 class="card-title">Predict Passenger Demand</h2>
+      <p>Use this tool to forecast passenger demand based on time and day parameters.</p>
+      
+      <form action="/predict_demand" method="POST" id="predictionForm">
+        <div class="form-group">
+          <label for="time_of_day" class="form-label">
+            <i class="fas fa-clock" style="color: var(--primary);"></i> Time of Day
+          </label>
+          <input type="time" id="time_of_day" name="time_of_day" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="day_of_week" class="form-label">
+            <i class="fas fa-calendar-day" style="color: var(--secondary);"></i> Day of Week
+          </label>
+          <select id="day_of_week" name="day_of_week" class="form-control" required>
+            <option value="0">Monday</option>
+            <option value="1">Tuesday</option>
+            <option value="2">Wednesday</option>
+            <option value="3">Thursday</option>
+            <option value="4">Friday</option>
+            <option value="5">Saturday</option>
+            <option value="6">Sunday</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="is_weekend" class="form-label">
+            <i class="fas fa-umbrella-beach" style="color: var(--accent);"></i> Is Weekend?
+          </label>
+          <select id="is_weekend" name="is_weekend" class="form-control" required>
+            <option value="0">No</option>
+            <option value="1">Yes</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <button type="submit" class="btn btn-primary btn-block">
+            <i class="fas fa-chart-line"></i> Predict Demand
+          </button>
+        </div>
+      </form>
+    </div>
+    
+    <div class="glass-card">
+      <h3 class="card-title">Typical Demand Patterns</h3>
+      <canvas id="demandChart" width="400" height="200"></canvas>
+    </div>
+    
+    <div class="glass-card">
+      <h3 class="card-title">How It Works</h3>
+      <p>Our demand prediction system uses machine learning algorithms trained on historical passenger data to forecast expected demand levels. This helps in:</p>
+      <ul>
+        <li>Optimizing bus schedules</li>
+        <li>Allocating resources efficiently</li>
+        <li>Reducing wait times</li>
+        <li>Improving overall service quality</li>
+      </ul>
+      <p>The model takes into account time of day, day of week, and whether it's a weekend to generate accurate predictions.</p>
+    </div>
+  </div>
+  
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script>
+    // Auto-update weekend status based on day selection
+    document.getElementById('day_of_week').addEventListener('change', function() {
+      const dayValue = parseInt(this.value);
+      const isWeekendSelect = document.getElementById('is_weekend');
+      
+      if (dayValue === 5 || dayValue === 6) { // Saturday or Sunday
+        isWeekendSelect.value = '1';
+      } else {
+        isWeekendSelect.value = '0';
+      }
+    });
+    
+    // Set default time to current time
+    const now = new Date();
+    const timeString = now.getHours().toString().padStart(2, '0') + ':' + 
+                       now.getMinutes().toString().padStart(2, '0');
+    document.getElementById('time_of_day').value = timeString;
+    
+    // Set default day to current day
+    const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const mappedDay = currentDay === 0 ? 6 : currentDay - 1; // Convert to 0 = Monday, 6 = Sunday
+    document.getElementById('day_of_week').value = mappedDay.toString();
+    
+    // Set default weekend status
+    document.getElementById('is_weekend').value = (currentDay === 0 || currentDay === 6) ? '1' : '0';
+    
+    // Sample data for the chart
+    const ctx = document.getElementById('demandChart').getContext('2d');
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ['6 AM', '8 AM', '10 AM', '12 PM', '2 PM', '4 PM', '6 PM', '8 PM', '10 PM'],
+        datasets: [
+          {
+            label: 'Weekday',
+            data: [20, 80, 40, 50, 45, 75, 90, 60, 30],
+            borderColor: 'rgba(58, 134, 255, 1)',
+            backgroundColor: 'rgba(58, 134, 255, 0.1)',
+            tension: 0.4,
+            fill: true
+          },
+          {
+            label: 'Weekend',
+            data: [10, 30, 45, 60, 70, 65, 55, 40, 25],
+            borderColor: 'rgba(255, 0, 110, 1)',
+            backgroundColor: 'rgba(255, 0, 110, 0.1)',
+            tension: 0.4,
+            fill: true
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'top',
+          },
+          title: {
+            display: true,
+            text: 'Average Passenger Demand by Time of Day'
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Number of Passengers'
+            }
+          },
+          x: {
+            title: {
+              display: true,
+              text: 'Time of Day'
+            }
+          }
+        }
+      }
+    });
+    
+    // Toggle the profile dropdown when clicking on the profile button.
+    document.getElementById("profileBtn").addEventListener("click", function(event) {
+      event.stopPropagation();
+      var dropdown = document.getElementById("profileDropdown");
+      dropdown.style.display = (dropdown.style.display === "block") ? "none" : "block";
+    });
+
+    // Close the dropdown when clicking outside of it.
+    window.addEventListener("click", function() {
+      document.getElementById("profileDropdown").style.display = "none";
+    });
+  </script>
+</body>
+</html>

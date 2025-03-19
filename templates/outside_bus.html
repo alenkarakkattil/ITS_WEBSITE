@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ITS - Bus Schedules</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    /* Common Navbar Styling */
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: linear-gradient(90deg, #112240, #1e3c72);
+      box-shadow: var(--shadow);
+      margin-bottom: 1rem;
+    }
+    .navbar-left,
+    .navbar-center,
+    .navbar-right {
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+    .navbar-center {
+      justify-content: center;
+      gap: 1rem;
+    }
+    .navbar-right {
+      justify-content: flex-end;
+      position: relative;
+    }
+    .logo {
+      height: 50px;
+    }
+    /* Navigation buttons styling */
+    .nav-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.2rem;
+      font-family: 'Montserrat', sans-serif;
+      cursor: pointer;
+      text-decoration: none;
+      padding: 0.25rem 0.5rem;
+    }
+    .nav-btn:hover {
+      text-decoration: underline;
+    }
+    .nav-btn.active {
+      color: #1e90ff;
+      border-bottom: 2px solid #1e90ff;
+    }
+    /* Profile button styles */
+    .profile-btn {
+      display: flex;
+      align-items: center;
+      background: none;
+      border: none;
+      cursor: pointer;
+      outline: none;
+      color: white;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+    .profile-icon {
+      height: 30px;
+      width: 30px;
+      margin-right: 0.5rem;
+      filter: brightness(0) invert(1);
+    }
+    .profile-btn span {
+      font-family: 'Montserrat', sans-serif;
+    }
+    .dropdown {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 60px;
+      background: #fff;
+      border: 1px solid var(--gray-light);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      z-index: 100;
+      min-width: 150px;
+    }
+    .dropdown-item {
+      display: block;
+      padding: 0.75rem 1rem;
+      color: var(--dark);
+      text-decoration: none;
+    }
+    .dropdown-item:hover {
+      background: var(--gray-light);
+    }
+    /* Adjust existing elements */
+    .map-container {
+      width: 100%;
+      height: 400px;
+      border-radius: var(--border-radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      margin: 1.5rem 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Navbar -->
+    <div class="navbar">
+      <div class="navbar-left">
+        <img src="{{ url_for('static', filename='img/itslogo.PNG') }}" alt="ITS Logo" class="logo">
+      </div>
+      <div class="navbar-center">
+        <a href="/dashboard" class="nav-btn">Home</a>
+        <a href="/recommendation" class="nav-btn">Recommendation</a>
+        <a href="/live_bus" class="nav-btn">Live Bus</a>
+        <a href="/outside_bus" class="nav-btn active">Bus Schedules</a>
+      </div>
+      <div class="navbar-right">
+        <button class="profile-btn" id="profileBtn">
+          <img src="{{ url_for('static', filename='img/profile.svg') }}" alt="Profile Icon" class="profile-icon">
+          <span>Profile</span>
+        </button>
+        <div class="dropdown" id="profileDropdown">
+          <a href="/profile" class="dropdown-item">Profile</a>
+          <a href="/logout" class="dropdown-item">Logout</a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Outside Bus Content -->
+    <div class="glass-card animate-fade-in">
+      <h2 class="card-title">Find Your Route</h2>
+      
+      <form action="/submit_outside_bus" method="POST" id="routeForm">
+        <div class="form-group">
+          <label for="start_stop" class="form-label">
+            <i class="fas fa-map-marker-alt" style="color: var(--primary);"></i> Start Stop
+          </label>
+          <input list="start_stops" id="start_stop" name="start_stop" class="form-control" required>
+          <datalist id="start_stops">
+            {% for stop in bus_stops %}
+              <option value="{{ stop }}">
+            {% endfor %}
+          </datalist>
+        </div>
+        
+        <div class="form-group">
+          <button type="button" onclick="getUserLocation()" class="btn btn-secondary">
+            <i class="fas fa-location-arrow"></i> Find Nearest Bus Stop
+          </button>
+          <div id="locationStatus" style="margin-top: 0.5rem; font-size: 0.9rem; color: var(--gray);"></div>
+        </div>
+        
+        <div class="form-group">
+          <label for="end_stop" class="form-label">
+            <i class="fas fa-flag-checkered" style="color: var(--accent);"></i> End Stop
+          </label>
+          <input list="end_stops" id="end_stop" name="end_stop" class="form-control" required>
+          <datalist id="end_stops">
+            {% for stop in bus_stops %}
+              <option value="{{ stop }}">
+            {% endfor %}
+          </datalist>
+        </div>
+        
+        <div class="form-group">
+          <button type="submit" class="btn btn-primary btn-block">
+            <i class="fas fa-search"></i> Find Routes
+          </button>
+        </div>
+      </form>
+    </div>
+    
+    <div id="map-container" class="map-container">
+      <!-- The map will appear here -->
+    </div>
+  </div>
+  
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script>
+    // Toggle profile dropdown
+    document.getElementById("profileBtn").addEventListener("click", function(event) {
+      event.stopPropagation();
+      var dropdown = document.getElementById("profileDropdown");
+      dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+    });
+    window.addEventListener("click", function() {
+      document.getElementById("profileDropdown").style.display = "none";
+    });
+    
+    // Function to get user's location and update the route map (existing functionality)
+    function getUserLocation() {
+      const locationStatus = document.getElementById('locationStatus');
+      locationStatus.textContent = 'Getting your location...';
+      
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          var lat = position.coords.latitude;
+          var lon = position.coords.longitude;
+          map.setView([lat, lon], 15);
+          locationStatus.textContent = 'Location found! Searching for nearest bus stop...';
+          
+          fetch('/get_nearest_stop', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat: lat, lon: lon })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.nearest_stop) {
+              document.getElementById("start_stop").value = data.nearest_stop;
+              locationStatus.textContent = `Nearest stop: ${data.nearest_stop}`;
+              // Remove any existing markers if needed and add new markers
+              if (userMarker) map.removeLayer(userMarker);
+              if (stopMarker) map.removeLayer(stopMarker);
+              userMarker = L.marker([lat, lon], {
+                icon: L.divIcon({
+                  className: 'user-location-marker',
+                  html: '<i class="fas fa-user" style="color: var(--primary); font-size: 24px;"></i>',
+                  iconSize: [24, 24],
+                  iconAnchor: [12, 12]
+                })
+              }).addTo(map).bindPopup("Your Location").openPopup();
+              stopMarker = L.marker([data.bus_stop_lat, data.bus_stop_lon], {
+                icon: L.divIcon({
+                  className: 'bus-stop-marker',
+                  html: '<i class="fas fa-bus" style="color: var(--accent); font-size: 24px;"></i>',
+                  iconSize: [24, 24],
+                  iconAnchor: [12, 12]
+                })
+              }).addTo(map).bindPopup(data.nearest_stop);
+              // Optionally draw route line...
+            } else {
+              locationStatus.textContent = 'No nearest stop found.';
+            }
+          })
+          .catch(error => {
+            console.error("Error:", error);
+            locationStatus.textContent = 'Error fetching the nearest stop.';
+          });
+        }, function(error) {
+          locationStatus.textContent = 'Unable to retrieve your location: ' + error.message;
+        });
+      } else {
+        locationStatus.textContent = 'Geolocation is not supported by this browser.';
+      }
+    }
+    
+    // Initialize the map for outside_bus page
+    var map = L.map('map-container').setView([12.9716, 77.5946], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+  </script>
+</body>
+</html>

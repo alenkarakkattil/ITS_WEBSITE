@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ITS - Live Buses</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    /* Navbar styling */
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: linear-gradient(90deg, #112240, #1e3c72);
+      box-shadow: var(--shadow);
+      margin-bottom: 1rem;
+    }
+    .navbar-left,
+    .navbar-center,
+    .navbar-right {
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+    .navbar-center {
+      justify-content: center;
+      gap: 1rem;
+    }
+    .navbar-right {
+      justify-content: flex-end;
+      position: relative;
+    }
+    .logo {
+      height: 50px;
+    }
+    /* Navigation buttons */
+    .nav-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.2rem;
+      font-family: 'Montserrat', sans-serif;
+      cursor: pointer;
+      text-decoration: none;
+      padding: 0.25rem 0.5rem;
+    }
+    .nav-btn:hover {
+      text-decoration: underline;
+    }
+    .nav-btn.active {
+      color: #1e90ff;
+      border-bottom: 2px solid #1e90ff;
+    }
+    /* Profile button */
+    .profile-btn {
+      display: flex;
+      align-items: center;
+      background: none;
+      border: none;
+      cursor: pointer;
+      outline: none;
+      color: white;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+    .profile-icon {
+      height: 30px;
+      width: 30px;
+      margin-right: 0.5rem;
+      filter: brightness(0) invert(1);
+    }
+    .profile-btn span {
+      font-family: 'Montserrat', sans-serif;
+    }
+    .dropdown {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 60px;
+      background: #fff;
+      border: 1px solid var(--gray-light);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      z-index: 100;
+      min-width: 150px;
+    }
+    .dropdown-item {
+      display: block;
+      padding: 0.75rem 1rem;
+      color: var(--dark);
+      text-decoration: none;
+    }
+    .dropdown-item:hover {
+      background: var(--gray-light);
+    }
+    /* Live Bus page specific */
+    .map-container {
+      width: 100%;
+      height: 400px;
+      border-radius: var(--border-radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      margin: 1.5rem 0;
+    }
+    .dashboard-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+    .dashboard-card {
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      transition: var(--transition);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 180px;
+      position: relative;
+    }
+    .dashboard-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-lg);
+    }
+    .dashboard-card i {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      color: var(--primary);
+    }
+    .dashboard-card h3 {
+      margin: 0;
+      font-weight: 600;
+      color: var(--dark);
+    }
+    .dashboard-card p {
+      margin: 0.5rem 0 0;
+      color: var(--gray);
+    }
+    .pulse {
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(255, 0, 110, 0.7);
+      }
+      70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 10px rgba(255, 0, 110, 0);
+      }
+      100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(255, 0, 110, 0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Navbar -->
+    <div class="navbar">
+      <div class="navbar-left">
+        <img src="{{ url_for('static', filename='img/itslogo.PNG') }}" alt="ITS Logo" class="logo">
+      </div>
+      <div class="navbar-center">
+        <a href="/dashboard" class="nav-btn">Home</a>
+        <a href="/recommendation" class="nav-btn">Recommendation</a>
+        <a href="/live_bus" class="nav-btn active">Live Bus</a>
+        <a href="/outside_bus" class="nav-btn">Bus Schedules</a>
+      </div>
+      <div class="navbar-right">
+        <button class="profile-btn" id="profileBtn">
+          <img src="{{ url_for('static', filename='img/profile.svg') }}" alt="Profile Icon" class="profile-icon">
+          <span>Profile</span>
+        </button>
+        <div class="dropdown" id="profileDropdown">
+          <a href="/profile" class="dropdown-item">Profile</a>
+          <a href="/logout" class="dropdown-item">Logout</a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Live Bus Content -->
+    <div class="glass-card animate-fade-in">
+      <h2 class="card-title">Currently Active Buses</h2>
+      
+      <div id="map-container" class="map-container"></div>
+      
+      <div class="mt-4">
+        {% if live_bus_ids %}
+          <div class="dashboard-cards">
+            {% for bus_id in live_bus_ids %}
+              <div class="dashboard-card bus-card" data-bus-id="{{ bus_id }}">
+                <i class="fas fa-bus"></i>
+                <div class="pulse" style="width: 10px; height: 10px; background-color: var(--accent); border-radius: 50%; position: absolute; top: 10px; right: 10px;"></div>
+                <h3>{{ bus_id }}</h3>
+                <p class="bus-status">Loading...</p>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-center">
+            <p>No live buses found at the moment.</p>
+            <p>Please check back later or contact support if you believe this is an error.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script>
+    // Toggle profile dropdown
+    document.getElementById("profileBtn").addEventListener("click", function(event) {
+      event.stopPropagation();
+      var dropdown = document.getElementById("profileDropdown");
+      dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+    });
+    window.addEventListener("click", function() {
+      document.getElementById("profileDropdown").style.display = "none";
+    });
+    
+    // Live Bus JS: Update bus locations and map display
+    var map = L.map('map-container').setView([12.9716, 77.5946], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    
+    var busMarkers = {};
+    
+    function createBusIcon(busId) {
+      return L.divIcon({
+        className: 'bus-marker',
+        html: `<div style="background-color: var(--primary); color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-weight: bold; box-shadow: 0 0 10px rgba(0,0,0,0.3);">
+                  <i class="fas fa-bus"></i>
+                </div>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+      });
+    }
+    
+    function updateBusLocations() {
+      {% if live_bus_ids %}
+        {% for bus_id in live_bus_ids %}
+          fetch("/get_last_location", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ bus_id: "{{ bus_id }}" })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.error) {
+              console.error("Error:", data.error);
+              return;
+            }
+            var lat = data.latitude;
+            var lng = data.longitude;
+            if (busMarkers["{{ bus_id }}"]) {
+              busMarkers["{{ bus_id }}"].setLatLng([lat, lng]);
+            } else {
+              busMarkers["{{ bus_id }}"] = L.marker([lat, lng], { icon: createBusIcon("{{ bus_id }}") })
+                .addTo(map)
+                .bindPopup(`<strong>Bus ID: {{ bus_id }}</strong><br>Last updated: ${new Date().toLocaleTimeString()}`);
+            }
+            const busCard = document.querySelector(`.bus-card[data-bus-id="{{ bus_id }}"] .bus-status`);
+            if (busCard) {
+              busCard.innerHTML = `<span style="color: var(--success);">Active</span>`;
+            }
+          })
+          .catch(error => {
+            console.error("Error fetching bus location:", error);
+            const busCard = document.querySelector(`.bus-card[data-bus-id="{{ bus_id }}"] .bus-status`);
+            if (busCard) {
+              busCard.innerHTML = `<span style="color: var(--danger);">Error</span>`;
+            }
+          });
+        {% endfor %}
+        setTimeout(() => {
+          if (Object.keys(busMarkers).length > 0) {
+            const markerBounds = L.featureGroup(Object.values(busMarkers)).getBounds();
+            map.fitBounds(markerBounds);
+          }
+        }, 1000);
+      {% endif %}
+    }
+    
+    updateBusLocations();
+    setInterval(updateBusLocations, 10000);
+    
+    document.querySelectorAll('.bus-card').forEach(card => {
+      card.addEventListener('click', function() {
+        const busId = this.getAttribute('data-bus-id');
+        const marker = busMarkers[busId];
+        if (marker) {
+          map.setView(marker.getLatLng(), 16);
+          marker.openPopup();
+          showNotification(`Centered on Bus ${busId}`, 'info');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color
+r13553068,Mofussil Kochi bus,,North Paravur ↔ Vyttila (via Koonammavu),,3,https://jungle-bus.github.io/unroll/route.html?name_l10n=ml&line=13553068,0000ff,ffffff
+r13606906,Kochi city bus,,Thrippoonithura ↔ Vyttila Mobility Hub,,3,https://jungle-bus.github.io/unroll/route.html?name_l10n=ml&line=13606906,008000,ffffff
+r13689658,Mofussil Kochi bus,,Aluva ↔ Vyttila Mobility Hub,,3,https://jungle-bus.github.io/unroll/route.html?name_l10n=ml&line=13689658,0000ff,ffffff
+r13904698,Ordinary bus,,Ernakulam south ↔ Poothotta,,3,https://jungle-bus.github.io/unroll/route.html?name_l10n=ml&line=13904698,ffffff,000000
+r12345678,Ordinary bus,,Ernakulam South KSRTC ↔ KSRTC Muvattupuzha Bus Stand(via Thiruvankulam),,3,,,

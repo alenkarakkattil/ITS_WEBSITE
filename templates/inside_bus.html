@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ITS - Inside Bus</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>ITS - Inside Bus</h1>
+    </div>
+    
+    <a href="/dashboard" class="back-link">
+      <i class="fas fa-arrow-left"></i> Back to Dashboard
+    </a>
+    
+    <div class="glass-card animate-fade-in">
+      <h2 class="card-title">Enter Your Journey Details</h2>
+      <p>Use this form to track your journey while you're inside a bus.</p>
+      
+      <form action="/submit_inside_bus" method="POST">
+        <div class="form-group">
+          <label for="start_stop" class="form-label">
+            <i class="fas fa-map-marker-alt" style="color: var(--primary);"></i> Start Stop
+          </label>
+          <input list="start_stops" id="start_stop" name="start_stop" class="form-control" required>
+          <datalist id="start_stops">
+            {% for stop in bus_stops %}
+              <option value="{{ stop }}">
+            {% endfor %}
+          </datalist>
+        </div>
+        
+        <div class="form-group">
+          <button type="button" onclick="getUserLocation()" class="btn btn-secondary">
+            <i class="fas fa-location-arrow"></i> Find Nearest Bus Stop
+          </button>
+          <div id="locationStatus" style="margin-top: 0.5rem; font-size: 0.9rem; color: var(--gray);"></div>
+        </div>
+        
+        <div class="form-group">
+          <label for="end_stop" class="form-label">
+            <i class="fas fa-flag-checkered" style="color: var(--accent);"></i> End Stop
+          </label>
+          <input list="end_stops" id="end_stop" name="end_stop" class="form-control" required>
+          <datalist id="end_stops">
+            {% for stop in bus_stops %}
+              <option value="{{ stop }}">
+            {% endfor %}
+          </datalist>
+        </div>
+        
+        <div class="form-group">
+          <button type="submit" class="btn btn-primary btn-block">
+            <i class="fas fa-search"></i> Find Routes
+          </button>
+        </div>
+      </form>
+    </div>
+    
+    <div class="glass-card">
+      <h3 class="card-title">How It Works</h3>
+      <div class="flex items-center gap-4">
+        <div style="flex: 1;">
+          <p><i class="fas fa-1" style="color: var(--primary);"></i> Enter your current bus stop and destination</p>
+          <p><i class="fas fa-2" style="color: var(--primary);"></i> Use "Find Nearest Bus Stop" to automatically detect your location</p>
+          <p><i class="fas fa-3" style="color: var(--primary);"></i> View available routes and select one to track</p>
+          <p><i class="fas fa-4" style="color: var(--primary);"></i> Get real-time updates on your journey progress</p>
+        </div>
+        <div style="flex: 1;">
+          <div id="map-container" class="map-container" style="height: 200px;">
+            <div style="height: 100%; display: flex; align-items: center; justify-content: center; color: var(--gray);">
+              <p>Map will be shown here when location is detected</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script>
+    // Function to get the user's GPS coordinates and send them to Flask
+    function getUserLocation() {
+      const locationStatus = document.getElementById('locationStatus');
+      locationStatus.textContent = 'Getting your location...';
+      
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          
+          locationStatus.textContent = 'Location found! Searching for nearest bus stop...';
+
+          // Send the coordinates to Flask using an AJAX POST request
+          fetch('/get_nearest_stop', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ lat: lat, lon: lon })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.nearest_stop) {
+              document.getElementById("start_stop").value = data.nearest_stop;
+              locationStatus.textContent = `Nearest stop: ${data.nearest_stop}`;
+              showNotification(`Nearest stop found: ${data.nearest_stop}`, 'success');
+              
+              // Initialize map
+              const mapContainer = document.getElementById('map-container');
+              mapContainer.innerHTML = '';
+              
+              const map = L.map(mapContainer).setView([lat, lon], 15);
+              L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+              }).addTo(map);
+              
+              // Add markers
+              L.marker([lat, lon], {
+                icon: L.divIcon({
+                  className: 'user-location-marker',
+                  html: '<i class="fas fa-user" style="color: var(--primary); font-size: 24px;"></i>',
+                  iconSize: [24, 24],
+                  iconAnchor: [12, 12]
+                })
+              }).addTo(map).bindPopup("Your Location").openPopup();
+              
+              L.marker([data.bus_stop_lat, data.bus_stop_lon], {
+                icon: L.divIcon({
+                  className: 'bus-stop-marker',
+                  html: '<i class="fas fa-bus" style="color: var(--accent); font-size: 24px;"></i>',
+                  iconSize: [24, 24],
+                  iconAnchor: [12, 12]
+                })
+              }).addTo(map).bindPopup(data.nearest_stop);
+              
+              // Draw line between user and bus stop
+              L.polyline([
+                [lat, lon],
+                [data.bus_stop_lat, data.bus_stop_lon]
+              ], {
+                color: 'var(--primary)',
+                weight: 3,
+                opacity: 0.7
+              }).addTo(map);
+            } else {
+              locationStatus.textContent = 'No nearest stop found.';
+              showNotification('No nearest stop found.', 'error');
+            }
+          })
+          .catch(error => {
+            console.error("Error:", error);
+            locationStatus.textContent = 'There was an error fetching the nearest stop.';
+            showNotification('Error fetching the nearest stop.', 'error');
+          });
+        }, function(error) {
+          locationStatus.textContent = 'Unable to retrieve your location: ' + error.message;
+          showNotification('Unable to retrieve your location: ' + error.message, 'error');
+        });
+      } else {
+        locationStatus.textContent = 'Geolocation is not supported by this browser.';
+        showNotification('Geolocation is not supported by this browser.', 'error');
+      }
+    }
+  </script>
+</body>
+</html>
+

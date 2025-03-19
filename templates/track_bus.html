@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ITS - Real-Time Bus Tracking</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Font Awesome and Google Fonts -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    /* Common Navbar Styling */
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: linear-gradient(90deg, #112240, #1e3c72);
+      box-shadow: var(--shadow);
+      margin-bottom: 1rem;
+    }
+    .navbar-left,
+    .navbar-center,
+    .navbar-right {
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+    .navbar-center {
+      justify-content: center;
+      gap: 1rem;
+    }
+    .navbar-right {
+      justify-content: flex-end;
+      position: relative;
+    }
+    .logo {
+      height: 50px;
+    }
+    /* Navigation buttons */
+    .nav-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.2rem;
+      font-family: 'Montserrat', sans-serif;
+      cursor: pointer;
+      text-decoration: none;
+      padding: 0.25rem 0.5rem;
+    }
+    .nav-btn:hover {
+      text-decoration: underline;
+    }
+    .nav-btn.active {
+      color: #1e90ff;
+      border-bottom: 2px solid #1e90ff;
+    }
+    /* Profile button styles */
+    .profile-btn {
+      display: flex;
+      align-items: center;
+      background: none;
+      border: none;
+      cursor: pointer;
+      outline: none;
+      color: white;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+    .profile-icon {
+      height: 30px;
+      width: 30px;
+      margin-right: 0.5rem;
+      filter: brightness(0) invert(1);
+    }
+    .profile-btn span {
+      font-family: 'Montserrat', sans-serif;
+    }
+    .dropdown {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 60px;
+      background: #fff;
+      border: 1px solid var(--gray-light);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      z-index: 100;
+      min-width: 150px;
+    }
+    .dropdown-item {
+      display: block;
+      padding: 0.75rem 1rem;
+      color: var(--dark);
+      text-decoration: none;
+    }
+    .dropdown-item:hover {
+      background: var(--gray-light);
+    }
+    
+    /* Adjusted styles for track bus page */
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    #map {
+      position: absolute;
+      top: 120px; /* Leave space for navbar */
+      left: 0;
+      width: 100%;
+      height: calc(100vh - 120px);
+      z-index: 1;
+    }
+    .status-container {
+      position: absolute;
+      top: 240px;
+      left: 20px;
+      z-index: 1000;
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      padding: 1rem;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      max-width: 300px;
+    }
+    .notification-container {
+      position: absolute;
+      top: 440px;
+      left: 20px;
+      z-index: 1000;
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      padding: 1rem;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      max-width: 300px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .bus-info {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--glass-border);
+    }
+    .pulse-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      background-color: var(--success);
+      border-radius: 50%;
+      margin-right: 5px;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(255, 0, 110, 0.7);
+      }
+      70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 10px rgba(255, 0, 110, 0);
+      }
+      100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(255, 0, 110, 0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Navbar -->
+    <div class="navbar">
+      <div class="navbar-left">
+        <img src="{{ url_for('static', filename='img/itslogo.PNG') }}" alt="ITS Logo" class="logo">
+      </div>
+      <div class="navbar-center">
+        <a href="/dashboard" class="nav-btn">Home</a>
+        <a href="/recommendation" class="nav-btn">Recommendation</a>
+        <a href="/live_bus" class="nav-btn active">Live Bus</a>
+        <a href="/outside_bus" class="nav-btn">Bus Schedules</a>
+      </div>
+      <div class="navbar-right">
+        <button class="profile-btn" id="profileBtn">
+          <img src="{{ url_for('static', filename='img/profile.svg') }}" alt="Profile Icon" class="profile-icon">
+          <span>Profile</span>
+        </button>
+        <div class="dropdown" id="profileDropdown">
+          <a href="/profile" class="dropdown-item">Profile</a>
+          <a href="/logout" class="dropdown-item">Logout</a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tracking Status and Notifications -->
+    <div class="status-container">
+      <div class="flex items-center">
+        <div class="pulse-dot"></div>
+        <strong>Tracking Bus ID: {{ bus_id }}</strong>
+      </div>
+      <div class="bus-info" id="busInfo">Loading bus information...</div>
+    </div>
+    
+    <div class="notification-container">
+      <strong><i class="fas fa-check-circle"></i> Passed Bus Stops:</strong>
+      <ul class="notification-list" id="notificationList">
+        <li>Loading stop information...</li>
+      </ul>
+    </div>
+    
+    <!-- Map Container -->
+    <div id="map"></div>
+  </div>
+  
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script>
+    // Toggle profile dropdown
+    document.getElementById("profileBtn").addEventListener("click", function(event) {
+      event.stopPropagation();
+      var dropdown = document.getElementById("profileDropdown");
+      dropdown.style.display = (dropdown.style.display === "block") ? "none" : "block";
+    });
+    window.addEventListener("click", function() {
+      document.getElementById("profileDropdown").style.display = "none";
+    });
+    
+    // Variables passed from the backend.
+    var busId = "{{ bus_id }}";
+    var tripId = "{{ trip_id }}";
+    var trackingStartStop = "{{ tracking_start_stop }}";  
+    var trackingEndStop = "{{ tracking_end_stop }}";
+
+    // Global variables for speed calculation.
+    var previousPos = null;
+    var previousTime = null;
+    var currentBusPos = null;
+
+    // Initialize the map (leaving space for navbar)
+    var map = L.map('map').setView([0, 0], 16);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap contributors, © CARTO',
+      maxZoom: 19
+    }).addTo(map);
+
+    // Custom bus icon
+    var busIcon = L.divIcon({
+      className: 'bus-marker',
+      html: '<i class="fas fa-bus" style="color: var(--accent); font-size: 30px; text-shadow: 0 0 5px rgba(255,255,255,0.7);"></i>',
+      iconSize: [30, 30],
+      iconAnchor: [15, 15]
+    });
+
+    // Bus marker.
+    var busMarker = L.marker([0, 0], {icon: busIcon}).addTo(map);
+
+    // LayerGroup for stops and route.
+    var stopsLayer = L.layerGroup().addTo(map);
+
+    // Update notifications for passed stops.
+    function updateNotifications(stops) {
+      var notificationList = document.getElementById("notificationList");
+      notificationList.innerHTML = "";
+      var passedStops = stops.filter(stop => stop.passed);
+      if (passedStops.length === 0) {
+        var li = document.createElement("li");
+        li.textContent = "No stops passed yet";
+        notificationList.appendChild(li);
+        return;
+      }
+      passedStops.forEach(function(stop) {
+        var li = document.createElement("li");
+        li.innerHTML = `<i class="fas fa-check-circle" style="color: var(--success);"></i> ${stop.stop_name}`;
+        notificationList.appendChild(li);
+      });
+    }
+
+    // Haversine formula to compute distance (in km) between two lat/lon points.
+    function haversineDistance(lat1, lon1, lat2, lon2) {
+      var R = 6371;
+      var dLat = toRad(lat2 - lat1);
+      var dLon = toRad(lon2 - lon1);
+      var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+    function toRad(value) {
+      return value * Math.PI / 180;
+    }
+
+    // Update bus info and ETA using computed speed.
+    function updateBusInfo(currentPos, stops, speed) {
+      var busInfoDiv = document.getElementById("busInfo");
+      var speedText = `<i class="fas fa-tachometer-alt"></i> Speed: <strong>${speed.toFixed(1)} km/h</strong>`;
+      var startDest = stops.find(stop => stop.stop_name.toLowerCase() === trackingStartStop.toLowerCase());
+      if (!startDest && stops.length > 0) startDest = stops[0];
+      var endDest = stops.find(stop => stop.stop_name.toLowerCase() === trackingEndStop.toLowerCase());
+      if (!endDest && stops.length > 0) endDest = stops[stops.length - 1];
+      var etaStart = "N/A", etaEnd = "N/A";
+      if (speed > 0) {
+        var distToStart = haversineDistance(currentPos.lat, currentPos.lng, startDest.stop_lat, startDest.stop_lon);
+        var distToEnd = haversineDistance(currentPos.lat, currentPos.lng, endDest.stop_lat, endDest.stop_lon);
+        etaStart = Math.round((distToStart / speed) * 60);
+        etaEnd = Math.round((distToEnd / speed) * 60);
+      }
+      var infoText = `<div>${speedText}</div>`;
+      if (startDest && startDest.stop_name) {
+        infoText += `<div><i class="fas fa-hourglass-start"></i> ETA to ${startDest.stop_name}: <strong>${etaStart} min</strong></div>`;
+      }
+      if (endDest && endDest.stop_name) {
+        infoText += `<div><i class="fas fa-hourglass-end"></i> ETA to ${endDest.stop_name}: <strong>${etaEnd} min</strong></div>`;
+      }
+      busInfoDiv.innerHTML = infoText;
+    }
+
+    // Draw/update stops on the map using OSRM.
+    function updateStopsOnMap(stops) {
+      stopsLayer.clearLayers();
+      var coords = stops.map(stop => stop.stop_lon + ',' + stop.stop_lat).join(';');
+      var osrmUrl = 'https://router.project-osrm.org/route/v1/driving/' + coords + '?overview=full&geometries=geojson';
+      fetch(osrmUrl)
+        .then(response => response.json())
+        .then(data => {
+          if(data.routes && data.routes.length > 0) {
+            var routeCoords = data.routes[0].geometry.coordinates;
+            var latLngs = routeCoords.map(coord => [coord[1], coord[0]]);
+            L.polyline(latLngs, { 
+              color: 'var(--primary)',
+              weight: 5,
+              opacity: 0.7,
+              lineJoin: 'round'
+            }).addTo(stopsLayer);
+          } else {
+            var fallbackLatLngs = stops.map(stop => [stop.stop_lat, stop.stop_lon]);
+            L.polyline(fallbackLatLngs, { 
+              color: 'var(--primary)',
+              weight: 5,
+              opacity: 0.7,
+              lineJoin: 'round'
+            }).addTo(stopsLayer);
+          }
+          stops.forEach(function(stop) {
+            var markerColor = stop.passed ? 'var(--success)' : 'var(--warning)';
+            var markerIcon = L.divIcon({
+              className: 'stop-marker',
+              html: `<i class="fas fa-circle" style="color: ${markerColor}; font-size: 14px;"></i>`,
+              iconSize: [14, 14],
+              iconAnchor: [7, 7]
+            });
+            var circle = L.marker([stop.stop_lat, stop.stop_lon], { icon: markerIcon }).addTo(stopsLayer);
+            circle.bindPopup(`
+              <div style="text-align: center;">
+                <strong>${stop.stop_name}</strong><br>
+                ${stop.departure_time ? 'Departure: ' + stop.departure_time : ''}
+                ${stop.passed ? '<br><span style="color: var(--success);">Passed</span>' : '<br><span style="color: var(--warning);">Upcoming</span>'}
+              </div>
+            `);
+          });
+        })
+        .catch(function(error) {
+          console.error("Error fetching OSRM route:", error);
+          var fallbackLatLngs = stops.map(stop => [stop.stop_lat, stop.stop_lon]);
+          L.polyline(fallbackLatLngs, { color: 'var(--primary)', weight: 5, opacity: 0.7, lineJoin: 'round' }).addTo(stopsLayer);
+          stops.forEach(function(stop) {
+            var markerColor = stop.passed ? 'var(--success)' : 'var(--warning)';
+            var markerIcon = L.divIcon({
+              className: 'stop-marker',
+              html: `<i class="fas fa-circle" style="color: ${markerColor}; font-size: 14px;"></i>`,
+              iconSize: [14, 14],
+              iconAnchor: [7, 7]
+            });
+            var circle = L.marker([stop.stop_lat, stop.stop_lon], { icon: markerIcon }).addTo(stopsLayer);
+            circle.bindPopup(`
+              <div style="text-align: center;">
+                <strong>${stop.stop_name}</strong><br>
+                ${stop.departure_time ? 'Departure: ' + stop.departure_time : ''}
+                ${stop.passed ? '<br><span style="color: var(--success);">Passed</span>' : '<br><span style="color: var(--warning);">Upcoming</span>'}
+              </div>
+            `);
+          });
+        });
+    }
+
+    // Fetch current bus location.
+    function fetchBusLocation() {
+      fetch("/get_last_location", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bus_id: busId })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          console.error("Error:", data.error);
+          return;
+        }
+        var lat = data.latitude;
+        var lng = data.longitude;
+        var newPos = L.latLng(lat, lng);
+        busMarker.setLatLng(newPos);
+        map.setView(newPos);
+        currentBusPos = newPos;
+        var currentTime = Date.now();
+        var computedSpeed = 0;
+        if (previousPos && previousTime) {
+          var timeDiff = (currentTime - previousTime) / 1000;
+          var distance = haversineDistance(previousPos.lat, previousPos.lng, newPos.lat, newPos.lng);
+          computedSpeed = distance / (timeDiff / 3600);
+          console.log("Computed Speed (km/h):", computedSpeed);
+        }
+        fetchStopsStatus(newPos, computedSpeed);
+        previousPos = newPos;
+        previousTime = currentTime;
+      })
+      .catch(error => {
+        console.error("Error fetching bus location:", error);
+      });
+    }
+
+    // Fetch stops status and update bus info.
+    function fetchStopsStatus(currentPos, speed) {
+      fetch("/get_stops_status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          trip_id: tripId,
+          lat: currentPos.lat,
+          lon: currentPos.lng
+        })
+      })
+      .then(response => response.json())
+      .then(stops => {
+        if (!Array.isArray(stops)) {
+          console.error("Expected an array from /get_stops_status, but got:", stops);
+          stops = [];
+        }
+        updateStopsOnMap(stops);
+        updateNotifications(stops);
+        updateBusInfo(currentPos, stops, speed);
+      })
+      .catch(error => {
+        console.error("Error fetching stops status:", error);
+      });
+    }
+
+    // Update bus location every 5 seconds.
+    setInterval(fetchBusLocation, 5000);
+    fetchBusLocation();
+  </script>
+</body>
+</html>

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ITS - Prediction Result</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Navbar styling */
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: linear-gradient(90deg, #112240, #1e3c72);
+      box-shadow: var(--shadow);
+      margin-bottom: 1rem;
+    }
+    .navbar-left,
+    .navbar-center,
+    .navbar-right {
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+    .navbar-center {
+      justify-content: center;
+      gap: 1rem;
+    }
+    .navbar-right {
+      justify-content: flex-end;
+      position: relative;
+    }
+    .logo {
+      height: 50px;
+    }
+    /* Navigation buttons */
+    .nav-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.2rem;
+      font-family: 'Montserrat', sans-serif;
+      cursor: pointer;
+      text-decoration: none;
+      padding: 0.25rem 0.5rem;
+    }
+    .nav-btn:hover {
+      text-decoration: underline;
+    }
+    .nav-btn.active {
+      color: #1e90ff;
+      border-bottom: 2px solid #1e90ff;
+    }
+    /* Profile button */
+    .profile-btn {
+      display: flex;
+      align-items: center;
+      background: none;
+      border: none;
+      cursor: pointer;
+      outline: none;
+      color: white;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+    .profile-icon {
+      height: 30px;
+      width: 30px;
+      margin-right: 0.5rem;
+      filter: brightness(0) invert(1);
+    }
+    .profile-btn span {
+      font-family: 'Montserrat', sans-serif;
+    }
+    .dropdown {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 60px;
+      background: #fff;
+      border: 1px solid var(--gray-light);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      z-index: 100;
+      min-width: 150px;
+    }
+    .dropdown-item {
+      display: block;
+      padding: 0.75rem 1rem;
+      color: var(--dark);
+      text-decoration: none;
+    }
+    .dropdown-item:hover {
+      background: var(--gray-light);
+    }
+    /* Glass card styling for page content */
+    .glass-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      border-radius: var(--border-radius-lg);
+      border: 1px solid var(--glass-border);
+      padding: 2rem;
+      box-shadow: var(--shadow-lg);
+      margin-bottom: 2rem;
+      transition: var(--transition);
+    }
+    .card-title {
+      font-family: var(--font-heading);
+      font-weight: 600;
+      color: var(--primary-dark);
+      margin-top: 0;
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Navbar -->
+    <div class="navbar">
+      <div class="navbar-left">
+        <img src="{{ url_for('static', filename='img/itslogo.PNG') }}" alt="ITS Logo" class="logo">
+      </div>
+      <div class="navbar-center">
+        <a href="/dashboard" class="nav-btn">Home</a>
+        <a href="/recommendation" class="nav-btn">Recommendation</a>
+        <a href="/live_bus" class="nav-btn">Live Bus</a>
+        <a href="/outside_bus" class="nav-btn">Bus Schedules</a>
+      </div>
+      <div class="navbar-right">
+        <button class="profile-btn" id="profileBtn">
+          <img src="{{ url_for('static', filename='img/profile.svg') }}" alt="Profile Icon" class="profile-icon">
+          <span>Profile</span>
+        </button>
+        <div class="dropdown" id="profileDropdown">
+          <a href="/profile" class="dropdown-item">Profile</a>
+          <a href="/logout" class="dropdown-item">Logout</a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Prediction Result Content -->
+    <div class="glass-card animate-fade-in">
+      <h2 class="card-title">Demand Prediction Results</h2>
+      <div class="flex justify-between items-center mb-4">
+        <div>
+          <p><i class="fas fa-clock" style="color: var(--primary);"></i> Time: <strong>{{ time_of_day }}</strong></p>
+          <p><i class="fas fa-calendar-day" style="color: var(--secondary);"></i> Day: <strong>
+            {% if day_of_week == 0 %}Monday
+            {% elif day_of_week == 1 %}Tuesday
+            {% elif day_of_week == 2 %}Wednesday
+            {% elif day_of_week == 3 %}Thursday
+            {% elif day_of_week == 4 %}Friday
+            {% elif day_of_week == 5 %}Saturday
+            {% elif day_of_week == 6 %}Sunday
+            {% endif %}
+          </strong></p>
+          <p><i class="fas fa-umbrella-beach" style="color: var(--accent);"></i> Weekend: <strong>{{ "Yes" if is_weekend == 1 else "No" }}</strong></p>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: 5rem; font-weight: 700; color: var(--primary);">{{ prediction }}</div>
+          <p style="font-size: 1.2rem;">Predicted Users</p>
+        </div>
+      </div>
+      
+      <div class="glass-card" style="background: rgba(255,255,255,0.5);">
+        <h3>Recommendation</h3>
+        {% if prediction > 80 %}
+          <p><i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i> <strong>High Demand Expected:</strong> Consider increasing the frequency of buses during this time to accommodate the high number of passengers.</p>
+        {% elif prediction > 40 %}
+          <p><i class="fas fa-info-circle" style="color: var(--primary);"></i> <strong>Moderate Demand Expected:</strong> Regular service should be sufficient to handle the passenger load.</p>
+        {% else %}
+          <p><i class="fas fa-check-circle" style="color: var(--success);"></i> <strong>Low Demand Expected:</strong> Consider reducing the frequency of buses or using smaller vehicles to optimize resources.</p>
+        {% endif %}
+      </div>
+      
+      <div class="flex justify-center mt-4">
+        <a href="/recommendation" class="btn btn-primary">
+          <i class="fas fa-redo"></i> Make Another Prediction
+        </a>
+      </div>
+    </div>
+    
+    <div class="glass-card">
+      <h3 class="card-title">Historical Comparison</h3>
+      <canvas id="comparisonChart" width="400" height="200"></canvas>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script>
+    // Toggle profile dropdown
+    document.getElementById("profileBtn").addEventListener("click", function(event) {
+      event.stopPropagation();
+      var dropdown = document.getElementById("profileDropdown");
+      dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+    });
+    window.addEventListener("click", function() {
+      document.getElementById("profileDropdown").style.display = "none";
+    });
+    
+    // Historical comparison chart
+    const prediction = {{ prediction }};
+    const pastWeeks = [];
+    for (let i = 0; i < 4; i++) {
+      pastWeeks.push(Math.round(prediction * (0.8 + Math.random() * 0.4)));
+    }
+    const ctx = document.getElementById('comparisonChart').getContext('2d');
+    const chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['4 Weeks Ago', '3 Weeks Ago', '2 Weeks Ago', 'Last Week', 'Current Prediction'],
+        datasets: [{
+          label: 'Passenger Count',
+          data: [...pastWeeks, prediction],
+          backgroundColor: [
+            'rgba(131, 56, 236, 0.6)',
+            'rgba(131, 56, 236, 0.6)',
+            'rgba(131, 56, 236, 0.6)',
+            'rgba(131, 56, 236, 0.6)',
+            'rgba(58, 134, 255, 0.8)'
+          ],
+          borderColor: [
+            'rgba(131, 56, 236, 1)',
+            'rgba(131, 56, 236, 1)',
+            'rgba(131, 56, 236, 1)',
+            'rgba(131, 56, 236, 1)',
+            'rgba(58, 134, 255, 1)'
+          ],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Number of Passengers'
+            }
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>

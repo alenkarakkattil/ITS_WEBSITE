@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ITS - Route Results</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Font Awesome and Google Fonts -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    /* Common Navbar Styling */
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: linear-gradient(90deg, #112240, #1e3c72);
+      box-shadow: var(--shadow);
+      margin-bottom: 1rem;
+    }
+    .navbar-left,
+    .navbar-center,
+    .navbar-right {
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+    .navbar-center {
+      justify-content: center;
+      gap: 1rem;
+    }
+    .navbar-right {
+      justify-content: flex-end;
+      position: relative;
+    }
+    .logo {
+      height: 50px;
+    }
+    /* Navigation buttons */
+    .nav-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.2rem;
+      font-family: 'Montserrat', sans-serif;
+      cursor: pointer;
+      text-decoration: none;
+      padding: 0.25rem 0.5rem;
+    }
+    .nav-btn:hover {
+      text-decoration: underline;
+    }
+    .nav-btn.active {
+      color: #1e90ff;
+      border-bottom: 2px solid #1e90ff;
+    }
+    /* Profile button styles */
+    .profile-btn {
+      display: flex;
+      align-items: center;
+      background: none;
+      border: none;
+      cursor: pointer;
+      outline: none;
+      color: white;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+    .profile-icon {
+      height: 30px;
+      width: 30px;
+      margin-right: 0.5rem;
+      filter: brightness(0) invert(1);
+    }
+    .profile-btn span {
+      font-family: 'Montserrat', sans-serif;
+    }
+    .dropdown {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 60px;
+      background: #fff;
+      border: 1px solid var(--gray-light);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      z-index: 100;
+      min-width: 150px;
+    }
+    .dropdown-item {
+      display: block;
+      padding: 0.75rem 1rem;
+      color: var(--dark);
+      text-decoration: none;
+    }
+    .dropdown-item:hover {
+      background: var(--gray-light);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Navbar -->
+    <div class="navbar">
+      <div class="navbar-left">
+        <img src="{{ url_for('static', filename='img/itslogo.PNG') }}" alt="ITS Logo" class="logo">
+      </div>
+      <div class="navbar-center">
+        <a href="/dashboard" class="nav-btn">Home</a>
+        <a href="/recommendation" class="nav-btn">Recommendation</a>
+        <a href="/live_bus" class="nav-btn">Live Bus</a>
+        <a href="/outside_bus" class="nav-btn active">Bus Schedules</a>
+      </div>
+      <div class="navbar-right">
+        <button class="profile-btn" id="profileBtn">
+          <img src="{{ url_for('static', filename='img/profile.svg') }}" alt="Profile Icon" class="profile-icon">
+          <span>Profile</span>
+        </button>
+        <div class="dropdown" id="profileDropdown">
+          <a href="/profile" class="dropdown-item">Profile</a>
+          <a href="/logout" class="dropdown-item">Logout</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Route Results Content -->
+    <div class="glass-card animate-fade-in">
+      <h2 class="card-title">Possible Routes</h2>
+      
+      <!-- Sorting Controls -->
+      <div class="flex justify-center mb-4">
+        <div class="checkbox-container">
+          <input type="checkbox" id="sortCost">
+          <label for="sortCost">Sort by Cost</label>
+        </div>
+        <div class="checkbox-container">
+          <input type="checkbox" id="sortDistance">
+          <label for="sortDistance">Sort by Distance</label>
+        </div>
+      </div>
+      
+      <!-- Results Container -->
+      <div id="results">
+        {% for route in routes %}
+          <a href="{{ url_for('route_details', route_index=loop.index0) }}"
+             class="route-card"
+             data-cost="{{ route.cost | float }}"
+             data-distance="{{ route.distance | float }}">
+             
+            {% if route.journey_type == 'single' %}
+              <h3 class="route-title">
+                <i class="fas fa-bus"></i> {{ route.route_long_name }}
+              </h3>
+              <div class="route-info">
+                <span><i class="fas fa-map-marker-alt" style="color: var(--primary);"></i> {{ route.start_stop }}</span>
+                <span><i class="fas fa-arrow-right"></i></span>
+                <span><i class="fas fa-flag-checkered" style="color: var(--accent);"></i> {{ route.end_stop }}</span>
+              </div>
+              <div class="route-info">
+                <span><i class="fas fa-clock"></i> {{ route.start_stop_time }}</span>
+                <span><i class="fas fa-arrow-right"></i></span>
+                <span><i class="fas fa-clock"></i> {{ route.end_stop_time }}</span>
+              </div>
+            {% elif route.journey_type == 'multi' %}
+              <h3 class="route-title">
+                <i class="fas fa-exchange-alt"></i> {{ route.route_long_name_leg1 }} → {{ route.route_long_name_leg2 }}
+              </h3>
+              <div class="route-info">
+                <span><i class="fas fa-map-marker-alt" style="color: var(--primary);"></i> {{ route.start_stop }}</span>
+                <span><i class="fas fa-arrow-right"></i></span>
+                <span><i class="fas fa-random" style="color: var(--warning);"></i> {{ route.transfer_stop }}</span>
+                <span><i class="fas fa-arrow-right"></i></span>
+                <span><i class="fas fa-flag-checkered" style="color: var(--accent);"></i> {{ route.end_stop }}</span>
+              </div>
+              <div class="route-info">
+                <span><i class="fas fa-clock"></i> {{ route.start_stop_time }}</span>
+                <span><i class="fas fa-arrow-right"></i></span>
+                <span><i class="fas fa-clock"></i> {{ route.transfer_stop_time }}</span>
+                <span><i class="fas fa-arrow-right"></i></span>
+                <span><i class="fas fa-clock"></i> {{ route.end_stop_time }}</span>
+              </div>
+            {% endif %}
+            
+            <!-- Footer: Distance, Time, and Cost -->
+            <div class="route-footer">
+              <span class="distance"><i class="fas fa-road"></i> {{ route.distance }} km</span>
+              <span class="time"><i class="fas fa-hourglass-half"></i> {{ route.elapsed }}</span>
+              <span class="cost"><i class="fas fa-rupee-sign"></i> {{ route.cost }}</span>
+            </div>
+          </a>
+        {% else %}
+          <div class="glass-card">
+            <p class="text-center">No routes found. Please try different stops.</p>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script>
+    // Toggle profile dropdown
+    document.getElementById("profileBtn").addEventListener("click", function(event) {
+      event.stopPropagation();
+      var dropdown = document.getElementById("profileDropdown");
+      dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+    });
+    window.addEventListener("click", function() {
+      document.getElementById("profileDropdown").style.display = "none";
+    });
+
+    // Helper function to sort route cards by cost or distance
+    function sortRoutes(criteria) {
+      var container = document.getElementById("results");
+      var routeCards = Array.from(container.getElementsByClassName("route-card"));
+      
+      routeCards.sort(function(a, b) {
+        var aVal = parseFloat(a.getAttribute("data-" + criteria));
+        var bVal = parseFloat(b.getAttribute("data-" + criteria));
+        return aVal - bVal;
+      });
+      
+      container.innerHTML = "";
+      routeCards.forEach(function(card) {
+        container.appendChild(card);
+      });
+    }
+
+    // Sorting checkboxes events
+    var sortCostCheckbox = document.getElementById("sortCost");
+    var sortDistanceCheckbox = document.getElementById("sortDistance");
+
+    sortCostCheckbox.addEventListener("change", function() {
+      if (this.checked) {
+        sortDistanceCheckbox.checked = false;
+        sortRoutes("cost");
+        showNotification('Routes sorted by cost', 'info');
+      } else {
+        location.reload();
+      }
+    });
+
+    sortDistanceCheckbox.addEventListener("change", function() {
+      if (this.checked) {
+        sortCostCheckbox.checked = false;
+        sortRoutes("distance");
+        showNotification('Routes sorted by distance', 'info');
+      } else {
+        location.reload();
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+route_id,service_id,trip_id,trip_headsign,direction_id,shape_id
+r13553068,Mo-Su,r13553067_Mo-Su,Vyttila,0,r13553067
+r13553068,Mo-Su,r13553066_Mo-Su,North Paravur,1,r13553066
+r13606906,Mo-Su,r13606905_Mo-Su,Vyttila Mobility Hub,0,r13606905
+r13606906,Mo-Su,r13606904_Mo-Su,Thrippoonithura,1,r13606904
+r13689658,Mo-Su,r13689657_Mo-Su,Vyttila Mobility Hub,0,r13689657
+r13689658,Mo-Su,r13689656_Mo-Su,Aluva,1,r13689656
+r13904698,Mo-Su,r13904696_Mo-Su,Ernakulam south,0,r13904696
+r13904698,Mo-Su,r13904697_Mo-Su,Poothotta,1,r13904697
+r12345678,Mo-Su,r123456781_Mo-Su,Muvattupuzha,0,r123456781
+r12345678,Mo-Su,r123456782_Mo-Su,Ernakulam South,1,r123456781

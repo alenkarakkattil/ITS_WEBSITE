@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ITS - Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    /* New full-width Navbar styling */
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: linear-gradient(90deg, #112240, #1e3c72);
+      box-shadow: var(--shadow);
+      margin-bottom: 1rem;
+    }
+    .navbar-left {
+      display: flex;
+      align-items: center;
+    }
+    .logo {
+      height: 50px;
+    }
+    .navbar-right {
+      position: relative;
+    }
+    .profile-btn {
+      display: flex;
+      align-items: center;
+      background: none;
+      border: none;
+      cursor: pointer;
+      outline: none;
+      color: white;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+    .profile-icon {
+        height: 30px;
+        width: 30px;
+        margin-right: 0.5rem;
+        /* Force the SVG to white if possible */
+        filter: brightness(0) invert(1);
+      }
+      /* Change the font of the profile text */
+      .profile-btn span {
+        font-family: 'Montserrat', sans-serif;
+      }
+    .dropdown {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 60px;
+      background: #fff;
+      border: 1px solid var(--gray-light);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      z-index: 100;
+      min-width: 150px;
+    }
+    .dropdown-item {
+      display: block;
+      padding: 0.75rem 1rem;
+      color: var(--dark);
+      text-decoration: none;
+    }
+    .dropdown-item:hover {
+      background: var(--gray-light);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- New Navbar -->
+    <div class="navbar">
+      <div class="navbar-left">
+        <img src="{{ url_for('static', filename='img/itslogo.PNG') }}" alt="ITS Logo" class="logo">
+      </div>
+      <div class="navbar-right">
+        <button class="profile-btn" id="profileBtn">
+          <img src="{{ url_for('static', filename='img/profile.svg') }}" alt="Profile Icon" class="profile-icon">
+          <span>Profile</span>
+        </button>
+        <div class="dropdown" id="profileDropdown">
+          <a href="/profile" class="dropdown-item">Profile</a>
+          <a href="/logout" class="dropdown-item">Logout</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-card animate-fade-in welcome-container">
+        <div class="flex justify-center items-center">
+          <h2 class="card-title">Welcome, {{ username }}!</h2>
+        </div>
+        <p>Welcome to your dashboard. Access all transit features below.</p>
+      </div>
+      
+      
+
+    <div class="dashboard-cards">
+      <a href="/outside_bus" class="dashboard-card">
+        <i class="fas fa-route"></i>
+        <h3>Bus Schedules</h3>
+        <p>Find and track scheduled buses</p>
+      </a>
+      
+      <a href="/live_bus" class="dashboard-card">
+        <i class="fas fa-bus"></i>
+        <div class="pulse" style="width: 10px; height: 10px; background-color: var(--accent); border-radius: 50%; position: absolute; top: 20px; right: 20px;"></div>
+        <h3>Live Bus</h3>
+        <p>View buses currently in service</p>
+      </a>
+      
+      <a href="/recommendation" class="dashboard-card">
+        <i class="fas fa-chart-line"></i>
+        <h3>Recommendation</h3>
+        <p>Get demand forecasts and insights</p>
+      </a>
+    </div>
+
+    <div class="glass-card">
+      <h3 class="card-title">Transit System Status</h3>
+      <div class="flex justify-between items-center">
+        <div>
+          <p><i class="fas fa-circle" style="color: var(--success);"></i> System Online</p>
+          <p><i class="fas fa-bus"></i> Active Buses: <span id="activeBusCount">Loading...</span></p>
+        </div>
+        <div>
+          <p><i class="fas fa-clock"></i> Last Updated: <span id="lastUpdated">Loading...</span></p>
+          <p><i class="fas fa-users"></i> Current Users: <span id="currentUsers">Loading...</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+    // Toggle the profile dropdown when clicking on the profile button.
+    document.getElementById("profileBtn").addEventListener("click", function(event) {
+      event.stopPropagation();
+      var dropdown = document.getElementById("profileDropdown");
+      dropdown.style.display = (dropdown.style.display === "block") ? "none" : "block";
+    });
+    // Close the dropdown when clicking outside of it.
+    window.addEventListener("click", function() {
+      document.getElementById("profileDropdown").style.display = "none";
+    });
+
+    function updateDashboardStatus() {
+        fetch('/get_dashboard_status')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('activeBusCount').textContent = data.activeBusCount;
+                document.getElementById('currentUsers').textContent = data.currentUsers;
+                document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+            })
+            .catch(error => console.error("Error fetching dashboard status:", error));
+    }
+    
+    // Update the dashboard every 5 seconds.
+    setInterval(updateDashboardStatus, 5000);
+    // Do an initial update when the page loads.
+    updateDashboardStatus();
+    
+</script>
+</body>
+</html>
